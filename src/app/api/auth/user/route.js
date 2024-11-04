@@ -95,7 +95,7 @@ export async function POST(req) {
     ]);
 
     return NextResponse.json({
-      status: 201,
+      status: 200,
       success: true,
       message: "User created successfully",
       userId: result.insertId, // Returning the ID of the newly created user
@@ -115,7 +115,7 @@ export async function GET(req) {
     try {
       const { searchParams } = new URL(req.url);
       const page = parseInt(searchParams.get("page"), 10) || 1;
-      const limit = parseInt(searchParams.get("limit"), 10) || 10;
+      const limit = 10;
       const offset = (page - 1) * limit;
   
       // Ensure limit and offset are numbers

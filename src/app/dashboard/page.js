@@ -1,6 +1,7 @@
 "use client";
 import React from 'react';
-import Link from 'next/link'; // Import the Link component
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import ErpHeader from '../_components/ErpHeader';
 import { Bar, Pie } from 'react-chartjs-2';
 import {
@@ -13,12 +14,20 @@ import {
   Legend,
   ArcElement,
 } from 'chart.js';
-import { FaUsers, FaUserTie, FaShoppingCart, FaChartLine, FaWarehouse, FaMoneyCheckAlt } from 'react-icons/fa';
+import { FaWallet,FaBriefcase,FaAddressBook,FaBoxOpen,FaShoppingBasket,FaDollarSign,FaClipboardList,FaHandshake,FaTruck } from 'react-icons/fa';
 
 // Register the components required for the charts
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement);
 
 const Dashboard = () => {
+  const router = useRouter();
+  // Check authentication token Admin or User
+  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+  if (token !== 'iamaAdminfrompc' && token !== 'iamaUserfrompc') {
+      alert('Access Denied. Invalid token.');
+      router.push('/');
+  }
+
   const barData = {
     labels: ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6', 'Day 7', 'Day 8'],
     datasets: [
@@ -32,7 +41,7 @@ const Dashboard = () => {
   };
 
   const pieData = {
-    labels: ['Today\'s Income', 'Today\'s Cost', 'Others', 'Loss'],
+    labels: ["Today's Income", "Today's Cost", 'Others', 'Loss'],
     datasets: [
       {
         data: [52.5, 12.9, 6.15, 28.45],
@@ -48,7 +57,7 @@ const Dashboard = () => {
     plugins: {
       legend: {
         display: false, // Hides the legend inside the Bar chart
-      }
+      },
     },
   };
 
@@ -80,27 +89,32 @@ const Dashboard = () => {
     <div className="min-h-screen bg-gray-50">
       <ErpHeader />
       <div className="max-w-7xl mx-auto px-4 py-6">
-        {/* Last 8 days income section */}
-        <div className="bg-white p-6 rounded-lg shadow-lg">
-          <h2 className="text-xl font-semibold mb-4">Last 8 days income</h2>
-          <div className="flex justify-between">
-            <div className="w-2/3">
-              <Bar data={barData} options={barOptions} />
-            </div>
-            <div className="w-2/5 h-64">
-              <Pie data={pieData} options={pieOptions} />
+        {/* Conditionally render the Last 8 days income section */}
+        {token === 'iamaAdminfrompc' && (
+          <div className="bg-white p-6 rounded-lg shadow-lg">
+            <h2 className="text-xl font-semibold mb-4">Last 8 days income</h2>
+            <div className="flex justify-between">
+              <div className="w-2/3">
+                <Bar data={barData} options={barOptions} />
+              </div>
+              <div className="w-2/5 h-64">
+                <Pie data={pieData} options={pieOptions} />
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Navigation cards */}
         <div className="grid grid-cols-3 gap-6 mt-10">
-          <Card title="Account" icon={<FaUsers />} link='/module/account' color="from-orange-400 to-red-500" />
-          <Card title="HR & Workers" icon={<FaUserTie />} link='/module/administration' color="from-blue-400 to-blue-500" />
-          <Card title="Customer" icon={<FaShoppingCart />} link='/module/customer' color="from-purple-400 to-purple-500" />
-          <Card title="Supplier" icon={<FaChartLine />} link='/module/supplier' color="from-green-400 to-green-500" />
-          <Card title="Stock" icon={<FaWarehouse />} link='/module/stock' color="from-indigo-400 to-indigo-500" />
-          <Card title="Purchase" icon={<FaMoneyCheckAlt />} link='/module/purchase' color="from-gray-400 to-gray-500" />
+          <Card title="Account" icon={<FaWallet />} link='/module/account' color="from-orange-500 to-red-600" />
+          <Card title="HR & Workers" icon={<FaBriefcase />} link='/module/administration' color="from-yellow-400 to-yellow-600" />
+          <Card title="Customer" icon={<FaAddressBook />} link='/module/customer' color="from-blue-500 to-blue-600" />
+          <Card title="Product" icon={<FaBoxOpen />} link='/module/product' color="from-purple-500 to-indigo-600" />
+          <Card title="Purchase" icon={<FaShoppingBasket />} link='/module/purchase' color="from-green-500 to-teal-600" />
+          <Card title="Sale" icon={<FaDollarSign />} link='/module/sale' color="from-pink-500 to-rose-600" />
+          <Card title="Stock" icon={<FaClipboardList />} link='/module/stock' color="from-gray-500 to-gray-600" />
+          <Card title="Supplier" icon={<FaHandshake />} link='/module/supplier' color="from-blue-500 to-orange-600" />
+          <Card title="Transport" icon={<FaTruck />} link='/module/transportation' color="from-teal-500 to-cyan-600" />
         </div>
       </div>
     </div>

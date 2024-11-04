@@ -1,54 +1,75 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import ErpHeader from '../../_components/ErpHeader';
+import axios from 'axios';
 
 const Administration = () => {
-  // Sample data for administrations
-  const [administrators, setAdministrators] = useState([
-    { id: 1, name: 'Alice Smith', role: 'Manager', email: 'alice@example.com', status: 'Active' },
-    { id: 2, name: 'Bob Johnson', role: 'Admin', email: 'bob@example.com', status: 'Inactive' },
-    { id: 3, name: 'Charlie Brown', role: 'Support', email: 'charlie@example.com', status: 'Active' },
-    { id: 4, name: 'Dana White', role: 'HR', email: 'dana@example.com', status: 'Active' },
-  ]);
-
-  // States for filters and new admin form
+  const [administrators, setAdministrators] = useState([]);
   const [nameFilter, setNameFilter] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [newAdmin, setNewAdmin] = useState({ name: '', role: '', email: '', status: '' });
+  const [newAdmin, setNewAdmin] = useState({ name: '', role: '', email: '', status: '', phone: '' });
   const [editAdminId, setEditAdminId] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
 
-  // Filtered administrators based on filters
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+
+  const fetchAdministrators = async (page) => {
+    try {
+      const response = await axios.get(`/api/auth/user`, { params: { page } });
+      setAdministrators(response.data.members);
+      setTotalPages(Math.ceil(response.data.totalCount / 10)); // Assuming totalCount is provided by the API
+    } catch (error) {
+      console.error('Error fetching administrators:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchAdministrators(currentPage);
+  }, [currentPage]);
+
   const filteredAdministrators = administrators.filter((admin) => {
     return (
       (nameFilter === '' || admin.name.toLowerCase().includes(nameFilter.toLowerCase())) &&
-      (roleFilter === '' || admin.role === roleFilter) &&
+      (roleFilter === '' || admin.access_role === roleFilter) &&
       (statusFilter === '' || admin.status === statusFilter)
     );
   });
 
+  const paginatedAdministrators = filteredAdministrators; // All filtered admins are shown because we're not slicing here
+
   const handleAddAdmin = () => {
-    setNewAdmin({ name: '', role: '', email: '', status: '' });
+    setNewAdmin({ name: '', role: '', email: '', status: '', phone: '' });
     setIsAdding(true);
     setIsModalOpen(true);
   };
 
-  const handleUpdateAdmin = () => {
+  const handleUpdateAdmin = async () => {
     if (editAdminId !== null) {
-      setAdministrators(administrators.map(admin =>
-        admin.id === editAdminId ? { ...newAdmin, id: admin.id } : admin
-      ));
-      setEditAdminId(null);
-      setNewAdmin({ name: '', role: '', email: '', status: '' });
-      setIsModalOpen(false);
+      try {
+        await axios.put(`/api/auth/user/${editAdminId}`, newAdmin);
+        setAdministrators((prev) =>
+          prev.map((admin) => (admin.id === editAdminId ? { ...newAdmin, id: editAdminId } : admin))
+        );
+        setEditAdminId(null);
+      } catch (error) {
+        console.error('Error updating administrator:', error.response?.data || error.message);
+      }
     }
+    setIsModalOpen(false);
   };
 
-  const handleDeleteAdmin = (id) => {
+  const handleDeleteAdmin = async (id) => {
     if (window.confirm("Are you sure you want to delete this administrator?")) {
-      setAdministrators(administrators.filter(admin => admin.id !== id));
+      try {
+        await axios.delete(`/api/auth/user/${id}`);
+        setAdministrators(administrators.filter((admin) => admin.id !== id));
+      } catch (error) {
+        console.error('Error deleting administrator:', error.response?.data || error.message);
+      }
     }
   };
 
@@ -64,13 +85,22 @@ const Administration = () => {
     setNewAdmin({ ...newAdmin, [name]: value });
   };
 
-  const handleSaveAdmin = () => {
-    if (isAdding) {
-      setAdministrators([...administrators, { ...newAdmin, id: administrators.length + 1 }]);
-    } else {
-      handleUpdateAdmin();
+  const handleSaveAdmin = async () => {
+    try {
+      if (isAdding) {
+        const response = await axios.post('/api/auth/user/', newAdmin);
+        setAdministrators([...administrators, { ...newAdmin, id: response.data.userId }]);
+      } else {
+        await handleUpdateAdmin();
+      }
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error('Error adding/updating administrator:', error.response?.data || error.message);
     }
-    setIsModalOpen(false);
+  };
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
   };
 
   return (
@@ -103,22 +133,24 @@ const Administration = () => {
           <button onClick={handleAddAdmin} className="bg-blue-500 text-white px-4 py-2 rounded">Add Administrator</button>
         </div>
         <table className="min-w-full bg-white shadow-md rounded-lg overflow-hidden">
-          <thead className="bg-gray-200">
-            <tr>
-              <th className="py-2 px-4 text-left">Name</th>
-              <th className="py-2 px-4 text-left">Role</th>
-              <th className="py-2 px-4 text-left">Email</th>
-              <th className="py-2 px-4 text-left">Status</th>
-              <th className="py-2 px-4 text-left">Actions</th>
+          <thead>
+            <tr className="bg-gray-100">
+              <th className="py-2 px-4">Name</th>
+              <th className="py-2 px-4">Role</th>
+              <th className="py-2 px-4">Email</th>
+              <th className="py-2 px-4">Phone</th>
+              <th className="py-2 px-4">Status</th>
+              <th className="py-2 px-4">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {filteredAdministrators.map((admin, index) => (
-              <tr key={index} className="border-t hover:bg-gray-100">
+            {paginatedAdministrators.map((admin) => (
+              <tr key={admin.id} className="border-t hover:bg-gray-100">
                 <td className="py-2 px-4">{admin.name}</td>
-                <td className="py-2 px-4">{admin.role}</td>
+                <td className="py-2 px-4">{admin.access_role}</td>
                 <td className="py-2 px-4">{admin.email}</td>
-                <td className="py-2 px-4">{admin.status}</td>
+                <td className="py-2 px-4">{admin.phone}</td>
+                <td className="py-2 px-4">{admin.is_active}</td>
                 <td className="py-2 px-4">
                   <button onClick={() => handleEditAdmin(admin)} className="bg-yellow-500 text-white px-2 py-1 rounded mr-2">Update</button>
                   <button onClick={() => handleDeleteAdmin(admin.id)} className="bg-red-500 text-white px-2 py-1 rounded">Delete</button>
@@ -127,67 +159,93 @@ const Administration = () => {
             ))}
           </tbody>
         </table>
-      </div>
 
-      {isModalOpen && (
-        <div className="fixed inset-0 flex justify-center items-center bg-black bg-opacity-50">
-          <div className="bg-white p-4 rounded-lg w-1/3">
-            <h2 className="text-xl mb-4">{isAdding ? 'Add Administrator' : 'Edit Administrator'}</h2>
-            <form>
-              <input
-                type="text"
-                name="name"
-                placeholder="Name"
-                value={newAdmin.name}
-                onChange={handleChange}
-                className="border border-gray-300 rounded w-full p-2 mb-2"
-              />
-              <input
-                type="text"
-                name="role"
-                placeholder="Role"
-                value={newAdmin.role}
-                onChange={handleChange}
-                className="border border-gray-300 rounded w-full p-2 mb-2"
-              />
-              <input
-                type="email"
-                name="email"
-                placeholder="Email"
-                value={newAdmin.email}
-                onChange={handleChange}
-                className="border border-gray-300 rounded w-full p-2 mb-2"
-              />
-              <select
-                name="status"
-                value={newAdmin.status}
-                onChange={handleChange}
-                className="border border-gray-300 rounded w-full p-2 mb-2"
+        {/* Pagination Controls */}
+        <div className="flex justify-between mt-4">
+          <button
+            disabled={currentPage === 1}
+            onClick={() => handlePageChange(currentPage - 1)}
+            className={`px-4 py-2 ${currentPage === 1 ? 'bg-gray-300' : 'bg-blue-500 text-white'} rounded`}
+          >
+            Prev
+          </button>
+          <div className="flex items-center">
+            {Array.from({ length: totalPages }, (_, index) => (
+              <button
+                key={index + 1}
+                onClick={() => handlePageChange(index + 1)}
+                className={`px-2 py-1 rounded ${currentPage === index + 1 ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
               >
-                <option value="">Select Status</option>
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-              </select>
-              <div className="flex justify-end space-x-4">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="bg-gray-500 text-white px-4 py-2 rounded"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSaveAdmin}
-                  className="bg-blue-500 text-white px-4 py-2 rounded"
-                >
+                {index + 1}
+              </button>
+            ))}
+          </div>
+          <button
+            disabled={currentPage === totalPages}
+            onClick={() => handlePageChange(currentPage + 1)}
+            className={`px-4 py-2 ${currentPage === totalPages ? 'bg-gray-300' : 'bg-blue-500 text-white'} rounded`}
+          >
+            Next
+          </button>
+        </div>
+
+        {/* Modal for Adding/Editing Administrators */}
+        {isModalOpen && (
+          <div className="fixed inset-0 flex justify-center items-center bg-black bg-opacity-50">
+            <div className="bg-white p-4 rounded-lg w-1/3">
+              <h2 className="text-xl mb-4">{isAdding ? 'Add Administrator' : 'Edit Administrator'}</h2>
+              <form>
+                <input
+                  type="text"
+                  name="name"
+                  placeholder="Name"
+                  value={newAdmin.name}
+                  onChange={handleChange}
+                  className="border border-gray-300 rounded w-full p-2 mb-2"
+                />
+                <input
+                  type="text"
+                  name="role"
+                  placeholder="Role"
+                  value={newAdmin.access_role}
+                  onChange={handleChange}
+                  className="border border-gray-300 rounded w-full p-2 mb-2"
+                />
+                <input
+                  type="email"
+                  name="email"
+                  placeholder="Email"
+                  value={newAdmin.email}
+                  onChange={handleChange}
+                  className="border border-gray-300 rounded w-full p-2 mb-2"
+                />
+                <input
+                  type="text"
+                  name="status"
+                  placeholder="Status"
+                  value={newAdmin.status}
+                  onChange={handleChange}
+                  className="border border-gray-300 rounded w-full p-2 mb-2"
+                />
+                <input
+                  type="text"
+                  name="phone"
+                  placeholder="Phone"
+                  value={newAdmin.phone}
+                  onChange={handleChange}
+                  className="border border-gray-300 rounded w-full p-2 mb-4"
+                />
+                <button type="button" onClick={handleSaveAdmin} className="bg-blue-500 text-white px-4 py-2 rounded">
                   {isAdding ? 'Add' : 'Update'}
                 </button>
-              </div>
-            </form>
+                <button type="button" onClick={() => setIsModalOpen(false)} className="bg-gray-300 text-black px-4 py-2 rounded ml-2">
+                  Cancel
+                </button>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </>
   );
 };

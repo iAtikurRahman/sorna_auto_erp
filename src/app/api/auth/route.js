@@ -11,8 +11,15 @@ export async function POST(req) {
             return NextResponse.json({
                 status: 200,
                 success: true,
-                token : "iamauserfrompc",
-                message: "Login successful",
+                token: "iamaAdminfrompc",
+                message: "Login successful as admin",
+            });
+        } else if (email === "user@gmail.com" && password === "user") {
+            return NextResponse.json({
+                status: 200,
+                success: true,
+                token: "iamaUserfrompc",
+                message: "Login successful as user",
             });
         } else {
             return NextResponse.json({
@@ -35,23 +42,23 @@ export async function POST(req) {
 
 export async function GET(req) {
     try {
-      // Execute the query using await to handle the promise
-      const [result] = await db.execute('SELECT * FROM tasks LIMIT 10');
-  
-      return NextResponse.json({
-        status: 200,
-        success: true,
-        data: result,
-        message: "Data retrieved successfully",
-      });
-  
+        // Execute the query using await to handle the promise
+        const [result] = await db.execute('SELECT * FROM tasks LIMIT 10');
+    
+        return NextResponse.json({
+            status: 200,
+            success: true,
+            data: result,
+            message: "Data retrieved successfully",
+        });
+    
     } catch (error) {
-      // Handle unexpected errors
-      return NextResponse.json({
-        status: 500,
-        success: false,
-        message: "An error occurred during the data retrieval process.",
-        error: error.message,
-      });
+        // Handle unexpected errors
+        return NextResponse.json({
+            status: 500,
+            success: false,
+            message: "An error occurred during the data retrieval process.",
+            error: error.message,
+        });
     }
-  }
+}
